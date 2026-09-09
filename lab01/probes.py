@@ -269,10 +269,16 @@ def probe_pcie_link(root: Path = Path("/"), lspci_output: str | None = None) -> 
     capability = _parse_link_line(lnkcap_match.group(1))
 
     # Step 4: Generate explanation string comparing capability vs negotiated link rate
+    # (Frequent error spot)
+    # Pass the numeric GT/s speed values, e.g., 8.0 vs 16.0
+    # Pass the integer generation numbers, e.g., 3 vs 4
     interpretation = generate_interpretation_string(
-        negotiated.get("gts"), 
-        capability.get("gts")
+        negotiated["gen"], 
+        capability["gen"]
     )
+
+
+
     # Return structured dict containing negotiated speed, capability, and interpretation
     return {
         "value": f"Gen{negotiated.get('gen')} x{negotiated.get('width')}",
