@@ -400,13 +400,7 @@ def probe_thermal_zones(root: Path = Path("/")) -> dict[str, Any]:
 
 # Probe 6
 def probe_power_mode(root: Path = Path("/"), nvpmodel_output: str | None = None) -> dict[str, Any]:
-    """Which nvpmodel power mode is active?
-
-    Recorded on every artifact this course produces. Lecture 01 slide 24 is
-    the argument for why: two students reporting different throughput for the
-    same model are usually reporting different power modes, and without this
-    field there is no way to find that out after the fact.
-    """
+    """Which nvpmodel power mode is active?"""
     source_label = "nvpmodel -q"
 
     # Step 1: Obtain nvpmodel command output
@@ -414,29 +408,24 @@ def probe_power_mode(root: Path = Path("/"), nvpmodel_output: str | None = None)
         raw_output = nvpmodel_output
         source_label = "injected nvpmodel output"
     else:
-        # Run 'nvpmodel -q' to query current active power mode profile
         raw_output = run(["nvpmodel", "-q"])
 
-    # Check if command output is missing or empty
     if not raw_output:
         return unknown(source_label, "nvpmodel output unavailable or command failed")
 
-    # Step 2: Parse mode name and mode ID from stdout text
-        # Parse numeric ID if present, "NVPM Power Mode ID: 0"
     mode_name: str | None = None
     mode_id: int | None = None
 
-    # Search for mode name line ("NVPMMode: MODE_15W" or "NV Power Mode: MODE_15W")
-    name_match = re.search(r"NV(?:PM)?(?:\s+Power)?\s*Mode:\s*([^\n\r]+)", raw_output, re.IGNORECASE)
+    # Search for mode name (handles "MODE_NAME=25W", "NVPMMode: MODE_15W", or "NV Power Mode: 15W")
+    name_match = re.search(r"(?:MODE_NAME=|NV(?:PM)?(?:\s+Power)?\s*Mode:\s*)([^\s\r\n]+)", raw_output, re.IGNORECASE)
     if name_match:
-        mode_name = name_match.group(1).strip()
+        mode_name = name_match.group(1).replace("MODE_", "").strip()
 
-    # Search for mode ID integer line ("NVPM Power Mode ID: 0" or "MODE_ID: 0")
-    id_match = re.search(r"(?:MODE_ID|Power\s+Mode\s+ID):\s*(\d+)", raw_output, re.IGNORECASE)
+    # Search for mode ID (handles "MODE_ID=1", "Power Mode ID: 1", or "NVPM Power Mode ID: 0")
+    id_match = re.search(r"(?:MODE_ID=|Power\s+Mode\s+ID:\s*|MODE_ID:\s*)(\d+)", raw_output, re.IGNORECASE)
     if id_match:
         mode_id = int(id_match.group(1))
 
-    # If parsing failed to isolate power mode name, return unknown
     if not mode_name:
         return unknown(source_label, "Unable to parse active power mode from nvpmodel output")
 
@@ -450,9 +439,9 @@ def probe_power_mode(root: Path = Path("/"), nvpmodel_output: str | None = None)
 
 
 ## for debugging - uncomment the following lines for debugging.
-if __name__ == "__main__":
-     out = probe_power_mode()
-     print(out)
+# if __name__ == "__main__":
+     # out = probe_power_mode()
+     # print(out)
 
 
 # for generating system_report.json
