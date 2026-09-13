@@ -227,9 +227,10 @@ def probe_nvme_present(root: Path = Path("/")) -> dict[str, Any]:
     is what lets the troubleshooting tree in the lab guide send a student to
     the right branch.
     """
-    # Path to model file for primary NVMe block device in sysfs
+    # Relative path to model text within sysfs (used for reading model name)
     model_rel = "/sys/block/nvme0n1/device/model"
-    # Fallback path if device/ model directory is structured directly under block node
+    
+    # Base block device path expected by sample report schema for 'source'
     sysfs_rel = "/sys/block/nvme0n1"
 
     # Attempt to read drive's model name using read_text with mock root injection
@@ -240,7 +241,8 @@ def probe_nvme_present(root: Path = Path("/")) -> dict[str, Any]:
         return {
             "value": True,
             "model": model_name,
-            "source": model_rel,
+            # Updated source to use sysfs_rel ("/sys/block/nvme0n1") instead of model_rel
+            "source": sysfs_rel,
             "status": "ok",
         }
 
