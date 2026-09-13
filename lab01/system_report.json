@@ -35,18 +35,18 @@
             "width": 1,
             "gen": 1
         },
-        "interpretation": "link running at its full capability, Gen1 x1",
         "source": "lspci -vv",
-        "status": "ok"
+        "status": "ok",
+        "interpretation": "link running at its full capability, Gen1 x1"
     },
     "thermal_zones": {
-        "value": 53.0,
+        "value": 53.1,
         "zones": {
-            "cpu-thermal": 52.75,
-            "gpu-thermal": 52.437,
-            "soc0-thermal": 52.531,
+            "cpu-thermal": 52.406,
+            "gpu-thermal": 52.656,
+            "soc0-thermal": 52.718,
             "soc1-thermal": 54.25,
-            "soc2-thermal": 51.906,
+            "soc2-thermal": 51.968,
             "tj-thermal": 54.312
         },
         "source": "/sys/class/thermal",

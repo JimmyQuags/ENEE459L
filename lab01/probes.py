@@ -330,24 +330,17 @@ def probe_pcie_link(root: Path = Path("/"), lspci_output: str | None = None) -> 
 
 # Probe 5
 def probe_thermal_zones(root: Path = Path("/")) -> dict[str, Any]:
-    """Every thermal zone the kernel exposes, in degrees C.
-
-    Sysfs reports millidegrees. The division by 1000 is the entire trap: a
-    report claiming the board idles at 43,000 degrees has been submitted more
-    than once, and it is a good, cheap lesson in reading units before reading
-    numbers.
-    """
-
+    """Every thermal zone the kernel exposes, in degrees C."""
     base_rel = "/sys/class/thermal"
+    source_label = "/sys/class/thermal/thermal_zone*/temp"
     thermal_dir = Path(root) / base_rel.lstrip("/")
 
     if not thermal_dir.exists() or not thermal_dir.is_dir():
-        return unknown(base_rel, "/sys/class/thermal absent or unreadable")
+        return unknown(source_label, "/sys/class/thermal absent or unreadable")
 
-    zones: dict[str, float] = {}
+    zones_list: list[dict[str, Any]] = []
 
     def _read_sysfs(rel_path: str) -> str | None:
-        # First attempt: use official read_text helper
         try:
             res = read_text(root, rel_path)
             if res is not None:
@@ -355,7 +348,6 @@ def probe_thermal_zones(root: Path = Path("/")) -> dict[str, Any]:
         except (TypeError, OSError):
             pass
 
-        # Fallback attempt: open in binary mode safely
         full_path = Path(root) / rel_path.lstrip("/")
         try:
             with open(full_path, "rb") as f:
@@ -367,7 +359,13 @@ def probe_thermal_zones(root: Path = Path("/")) -> dict[str, Any]:
 
         return None
 
-    for zone_path in sorted(thermal_dir.glob("thermal_zone*")):
+    # Sort zone paths numerical order (thermal_zone0, thermal_zone1, ...)
+    zone_paths = sorted(
+        thermal_dir.glob("thermal_zone*"),
+        key=lambda p: int(p.name.replace("thermal_zone", "")) if p.name.replace("thermal_zone", "").isdigit() else p.name
+    )
+
+    for zone_path in zone_paths:
         type_rel = f"{base_rel}/{zone_path.name}/type"
         temp_rel = f"{base_rel}/{zone_path.name}/temp"
 
@@ -376,21 +374,26 @@ def probe_thermal_zones(root: Path = Path("/")) -> dict[str, Any]:
 
         if zone_type and raw_temp:
             try:
-                # Convert raw millidegrees string to float and divide by 1000 for C
-                temp_c = float(raw_temp) / 1000.0
-                zones[zone_type] = temp_c
+                # Sysfs reports millidegrees C
+                temp_c = round(float(raw_temp) / 1000.0, 3)
+                zones_list.append({
+                    "zone": zone_path.name,
+                    "type": zone_type,
+                    "temp_c": temp_c,
+                })
             except ValueError:
                 continue
 
-    if not zones:
-        return unknown(base_rel, "No valid thermal zone entries found")
+    if not zones_list:
+        return unknown(source_label, "No valid thermal zone entries found")
 
-    avg_temp = round(sum(zones.values()) / len(zones), 1)
+    # In Jetson reports, 'value' represents max peak temp (or tj-thermal)
+    max_temp = max(z["temp_c"] for z in zones_list)
 
     return {
-        "value": avg_temp,
-        "zones": zones,
-        "source": base_rel,
+        "value": max_temp,
+        "zones": zones_list,
+        "source": source_label,
         "status": "ok",
     }
 
