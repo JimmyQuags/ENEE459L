@@ -40,7 +40,7 @@
         "interpretation": "link running at its full capability, Gen1 x1"
     },
     "thermal_zones": {
-        "value": 53.656,
+        "value": 54.031,
         "zones": [
             {
                 "zone": "thermal_zone0",
@@ -50,27 +50,27 @@
             {
                 "zone": "thermal_zone1",
                 "type": "gpu-thermal",
-                "temp_c": 52.093
+                "temp_c": 52.156
             },
             {
                 "zone": "thermal_zone5",
                 "type": "soc0-thermal",
-                "temp_c": 52.156
+                "temp_c": 52.25
             },
             {
                 "zone": "thermal_zone6",
                 "type": "soc1-thermal",
-                "temp_c": 53.656
+                "temp_c": 54.031
             },
             {
                 "zone": "thermal_zone7",
                 "type": "soc2-thermal",
-                "temp_c": 51.437
+                "temp_c": 51.562
             },
             {
                 "zone": "thermal_zone8",
                 "type": "tj-thermal",
-                "temp_c": 53.656
+                "temp_c": 54.031
             }
         ],
         "source": "/sys/class/thermal/thermal_zone*/temp",
@@ -78,7 +78,7 @@
     },
     "power_mode": {
         "value": "25W",
-        "mode_id": null,
+        "mode_id": 1,
         "source": "nvpmodel -q",
         "status": "ok"
     }
