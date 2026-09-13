@@ -344,27 +344,30 @@ def probe_thermal_zones(root: Path = Path("/")) -> dict[str, Any]:
 
     zones: dict[str, float] = {}
 
+    def _read_sysfs(rel_path: str) -> str | None:
+        # First attempt: use official read_text helper
+        try:
+            res = read_text(root, rel_path)
+            if res is not None:
+                return res
+        except (TypeError, OSError):
+            pass
+
+        # Fallback attempt: open in binary mode safely
+        full_path = Path(root) / rel_path.lstrip("/")
+        try:
+            with open(full_path, "rb") as f:
+                content = f.read()
+                if content is not None:
+                    return content.decode("utf-8", errors="replace").strip("\x00").strip()
+        except (OSError, UnicodeDecodeError, AttributeError):
+            pass
+
+        return None
+
     for zone_path in sorted(thermal_dir.glob("thermal_zone*")):
         type_rel = f"{base_rel}/{zone_path.name}/type"
         temp_rel = f"{base_rel}/{zone_path.name}/temp"
-
-        # Safe fallback reader function for sysfs files that break pathlib.read_text()
-        def _read_sysfs(rel_path: str) -> str | None:
-            # First try official helper function
-            try:
-                res = read_text(root, rel_path)
-                if res is not None:
-                    return res
-            except (TypeError, OSError):
-                pass
-            
-            # Fallback for sysfs pseudo-files if Helper 1 raises TypeError
-            full_path = Path(root) / rel_path.lstrip("/")
-            try:
-                with open(full_path, "rb") as f:
-                    return f.read().decode("utf-8", errors="replace").strip("\x00").strip()
-            except (OSError, UnicodeDecodeError):
-                return None
 
         zone_type = _read_sysfs(type_rel)
         raw_temp = _read_sysfs(temp_rel)
