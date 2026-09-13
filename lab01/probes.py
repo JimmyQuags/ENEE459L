@@ -30,6 +30,7 @@ import json
 # ---------------------------------------------------------------------------
 
 
+# Helper 1
 def read_text(root: Path, rel: str) -> str | None:
     """Read `root/rel`, returning None if it is missing or unreadable.
 
@@ -44,6 +45,7 @@ def read_text(root: Path, rel: str) -> str | None:
         return None
 
 
+# Helper 2
 def run(cmd: list[str]) -> str | None:
     """Run a command, returning stdout, or None if it is absent or fails."""
     if shutil.which(cmd[0]) is None:
@@ -57,6 +59,7 @@ def run(cmd: list[str]) -> str | None:
     return out.stdout.strip()
 
 
+# Helper 3
 def unknown(source: str, why: str) -> dict[str, Any]:
     """The value this lab returns when it cannot determine something.
 
@@ -82,6 +85,7 @@ _WIDTH_RE = re.compile(r"Width\s+x(\d+)")
 _GEN_BY_GTS = {2.5: 1, 5.0: 2, 8.0: 3, 16.0: 4, 32.0: 5, 64.0: 6}
 
 
+# Helper 4
 def _parse_link_line(line: str) -> dict[str, Any]:
     speed = _SPEED_RE.search(line)
     width = _WIDTH_RE.search(line)
@@ -93,6 +97,8 @@ def _parse_link_line(line: str) -> dict[str, Any]:
         "gen": _GEN_BY_GTS.get(gts) if gts is not None else None,
     }
 
+
+# Helper 5
 def generate_interpretation_string(neg_speed, cap_speed):
     if cap_speed > neg_speed:
         interpretation = (
@@ -113,7 +119,8 @@ def generate_interpretation_string(neg_speed, cap_speed):
 # The probes.
 # ---------------------------------------------------------------------------
 
-## An example code.
+
+# Probe 0 (example probe)
 def probe_module_model(root: Path = Path("/")) -> dict[str, Any]:
     """Which board is this?
 
@@ -135,8 +142,8 @@ def probe_module_model(root: Path = Path("/")) -> dict[str, Any]:
     return {"value": raw, "source": src, "status": "ok"}
 
 
-
 ## todo by students START HERE
+
 # Probe 1
 def probe_memory_total_kb(root: Path = Path("/")) -> dict[str, Any]:
     """How much memory is there, in kB, as the kernel counts it?
@@ -146,21 +153,28 @@ def probe_memory_total_kb(root: Path = Path("/")) -> dict[str, Any]:
     ever sees the pool. Students are expected to notice and to explain it in
     their report rather than round it up.
     """
-
-    # My Code:
+    # Specify relative path to meminfo file in procfs
     src = "/proc/meminfo"
-    raw = read_text(root, src)
-
-    if not raw:
-        return unknown(src, "meminfo node absent — /proc not mounted")
-
-    # /proc/meminfo typically starts with: MemTotal: 8012344 kB
-    m = re.search(r"MemTotal:\s+(\d+)\s+kB", raw)
-    if not m:
-        return unknown(src, f"unable to parse MemTotal from contents of {src}")
-
     
-    return {"value": int(m.group(1)), "source": src, "status": "ok"}
+    # Read text from /proc/meminfo relative to provided mock root directory
+    content = read_text(root, src)
+    
+    # Check if file was missing, empty, or unreadable
+    if not content:
+        # Return explicit error dictionary using unknown helper
+        return unknown(src, "/proc/meminfo absent or unreadable")
+
+    # Search for 'MemTotal' entry followed by whitespace, digits, and 'kB'
+    match = re.search(r"^MemTotal:\s+(\d+)\s*kB", content, re.MULTILINE)
+    
+    # Check if regex match failed to locate MemTotal field
+    if not match:
+        # Return error dictionary indicating pattern was not found
+        return unknown(src, "MemTotal line not found in /proc/meminfo")
+
+    # Convert captured memory string to integer and return success dict
+    return {"value": int(match.group(1)), "source": src, "status": "ok"}
+
 
 # Probe 2
 def probe_root_source(root: Path = Path("/")) -> dict[str, Any]:
@@ -175,21 +189,30 @@ def probe_root_source(root: Path = Path("/")) -> dict[str, Any]:
     /proc/mounts is preferred over `findmnt` because it needs no external
     binary and no elevation, and because it is what findmnt reads anyway.
     """
-
-    # My Code: 
+    # Specify path to Linux mount table
     src = "/proc/mounts"
-    raw = read_text(root, src)
+    
+    # Read text from /proc/mounts relative to mock root directory
+    content = read_text(root, src)
+    
+    # Check if mount table file is absent or unreadable
+    if not content:
+        # Return explicit unknown failure dict if /proc/mounts cannot be read
+        return unknown(src, "/proc/mounts absent or unreadable")
 
-    if not raw:
-        return unknown(src, "mounts table absent — /proc not mounted")
-
-    for line in raw.splitlines():
+    # Iterate line by line through /proc/mounts to locate root filesystem entry
+    for line in content.splitlines():
+        # Split each line by whitespace into fields (spec device, mount point, fs type, options, etc.)
         parts = line.split()
+        
+        # Ensure line has enough fields and mount point (2nd column) is exactly "/"
         if len(parts) >= 2 and parts[1] == "/":
+            # Extract device identifier (1st column, "/dev/nvme0n1p1" or "/dev/mmcblk0p1")
             device = parts[0]
+            # Return successfully parsed root device dictionary
             return {"value": device, "source": src, "status": "ok"}
 
-
+    # Return unknown if no line matching mount point "/" was found
     return unknown(src, "no root mount entry found in mount table")
 
 
@@ -202,30 +225,38 @@ def probe_nvme_present(root: Path = Path("/")) -> dict[str, Any]:
     is what lets the troubleshooting tree in the lab guide send a student to
     the right branch.
     """
+    # Path to model file for primary NVMe block device in sysfs
+    model_rel = "/sys/block/nvme0n1/device/model"
+    # Fallback path if device/ model directory is structured directly under block node
+    sysfs_rel = "/sys/block/nvme0n1"
 
-    # My Code:
-    # Define the primary sysfs directory where NVMe block devices register
-    block_dir_rel = "sys/block/nvme0n1"
-    nvme_path = Path(root) / block_dir_rel
+    # Attempt to read drive's model name using read_text with mock root injection
+    model_name = read_text(root, model_rel)
 
-    # Check if block device path exists in target root filesystem
-    if not nvme_path.exists():
+    # If model file is present and readable, NVMe drive is present
+    if model_name is not None:
         return {
-            "value": False,
-            "model": None,
-            "source": f"/{block_dir_rel}",
+            "value": True,
+            "model": model_name,
+            "source": model_rel,
             "status": "ok",
         }
 
-    # If present, read model name reported by device firmware
-    model_src = f"/{block_dir_rel}/device/model"
-    model_name = read_text(root, model_src)
+    # Check if block device node itself exists even if device/model file is unreadable
+    p = Path(root) / sysfs_rel.lstrip("/")
+    if p.exists():
+        return {
+            "value": True,
+            "model": "unknown",
+            "source": sysfs_rel,
+            "status": "ok",
+        }
 
-
+    # If neither path exists, no NVMe device is installed or detected
     return {
-        "value": True,
-        "model": model_name if model_name else "Unknown NVMe",
-        "source": f"/{block_dir_rel}",
+        "value": False,
+        "model": None,
+        "source": sysfs_rel,
         "status": "ok",
     }
 
@@ -242,50 +273,54 @@ def probe_pcie_link(root: Path = Path("/"), lspci_output: str | None = None) -> 
     `lspci_output` exists so the tests can drive this without root or hardware.
     In normal use it is None and the probe shells out.
     """
-    src = "lspci -vvv"
+    source_label = "lspci -vv"
 
-    # My Code:
-    # Step 1: Obtain lspci output (use provided mock string if available, else run command)
+    # Step 1: Obtain lspci output text (injected for unit testing or via system call)
     if lspci_output is not None:
-        raw = lspci_output
+        raw_output = lspci_output
+        source_label = "injected lspci output"
     else:
-        # Request verbose output to capture LnkCap and LnkSta fields
-        raw = run(["lspci", "-vvv"])
+        # Shell out to 'lspci -vv' using the 'run' helper function
+        raw_output = run(["lspci", "-vv"])
 
-    # If execution failed or returned no stdout, return unknown dictionary state
-    if not raw:
-        return unknown(src, "lspci command failed, missing, or returned empty output")
+    # If execution failed or returned empty stdout, report unknown
+    if not raw_output:
+        return unknown(source_label, "lspci -vv output unavailable or command failed")
 
-    # Step 2: Extract LnkSta (negotiated status) and LnkCap (device capability) lines
-    lnksta_match = re.search(r"LnkSta:\s*(.*)", raw)
-    lnkcap_match = re.search(r"LnkCap:\s*(.*)", raw)
+    # Step 2: Parse LnkSta (negotiated link status) and LnkCap (device link capabilities) lines
+    lnksta_line: str | None = None
+    lnkcap_line: str | None = None
 
-    # If either PCIe link descriptor line is missing, return unknown status
-    if not lnksta_match or not lnkcap_match:
-        return unknown(src, "could not locate LnkSta or LnkCap in lspci output")
+    for line in raw_output.splitlines():
+        # Match lines starting with LnkSta (ignoring leading whitespace)
+        if line.strip().startswith("LnkSta:"):
+            lnksta_line = line
+        # Match lines starting with LnkCap (ignoring leading whitespace)
+        elif line.strip().startswith("LnkCap:"):
+            lnkcap_line = line
 
-    # Step 3: Parse raw lines into structured dicts with gts, width, and gen
-    negotiated = _parse_link_line(lnksta_match.group(1))
-    capability = _parse_link_line(lnkcap_match.group(1))
+    # Verify LnkSta and LnkCap lines were located
+    if not lnksta_line or not lnkcap_line:
+        return unknown(source_label, "LnkSta or LnkCap entry missing from lspci output")
 
-    # Step 4: Generate explanation string comparing capability vs negotiated link rate
-    # (Frequent error spot)
-    # Pass the numeric GT/s speed values, e.g., 8.0 vs 16.0
-    # Pass the integer generation numbers, e.g., 3 vs 4
-    interpretation = generate_interpretation_string(
-        negotiated["gen"], 
-        capability["gen"]
-    )
+    # Step 3: Parse extracted status and capability lines using '_parse_link_line' helper
+    negotiated = _parse_link_line(lnksta_line)
+    capability = _parse_link_line(lnkcap_line)
 
+    # Validate that speed data was successfully parsed from both lines
+    if negotiated.get("gts") is None or capability.get("gts") is None:
+        return unknown(source_label, "Unable to parse speed/width from LnkSta/LnkCap lines")
 
+    # Step 4: Generate readable interpretation string using Helper 5
+    interpretation = generate_interpretation_string(negotiated["gts"], capability["gts"])
 
-    # Return structured dict containing negotiated speed, capability, and interpretation
+    # Step 5: Construct and return finalized probe report
     return {
-        "value": f"Gen{negotiated.get('gen')} x{negotiated.get('width')}",
+        "value": f"Gen{negotiated['gen']} x{negotiated['width']}",
         "negotiated": negotiated,
         "capability": capability,
         "interpretation": interpretation,
-        "source": src,
+        "source": source_label,
         "status": "ok",
     }
 
@@ -300,48 +335,50 @@ def probe_thermal_zones(root: Path = Path("/")) -> dict[str, Any]:
     numbers.
     """
 
-    # My Code:
-    src = "/sys/class/thermal"
-    thermal_dir = Path(root) / src.lstrip("/")
+    # Specify base path where Linux sysfs exposes thermal zone directories
+    base_rel = "/sys/class/thermal"
+    # Resolve physical directory path using provided mock root
+    thermal_dir = Path(root) / base_rel.lstrip("/")
 
-    # If thermal class directory does not exist or /sys is not mounted
-    if not thermal_dir.exists():
-        return unknown(src, "thermal class directory absent — /sys not mounted")
+    # Check if thermal class directory exists on this system/mock root
+    if not thermal_dir.exists() or not thermal_dir.is_dir():
+        return unknown(base_rel, "/sys/class/thermal absent or unreadable")
 
     zones: dict[str, float] = {}
 
-    # Iterate over all thermal_zone* subdirectories (e.g., thermal_zone0, thermal_zone1)
+    # Iterate over all thermal_zone* subdirectories found in sysfs
     for zone_path in sorted(thermal_dir.glob("thermal_zone*")):
-        zone_name = zone_path.name  # e.g., "thermal_zone0"
+        # Define relative paths for reading type and temp attributes
+        type_rel = f"{base_rel}/{zone_path.name}/type"
+        temp_rel = f"{base_rel}/{zone_path.name}/temp"
 
-        # Read thermal zone type (e.g., "CPU-therm", "GPU-therm")
-        type_rel = f"{src}/{zone_name}/type"
+        # Read zone name/type ("CPU-therm", "GPU-therm", "soc-thermal")
         zone_type = read_text(root, type_rel)
+        # Read raw temperature string in millidegrees Celsius ("43000")
+        raw_temp = read_text(root, temp_rel)
 
-        # Read raw millidegree temperature string from sysfs
-        temp_rel = f"{src}/{zone_name}/temp"
-        temp_raw = read_text(root, temp_rel)
+        # Skip entries that cannot be read properly
+        if zone_type and raw_temp:
+            try:
+                # Convert raw millidegrees string to float and divide by 1000 for C
+                temp_c = float(raw_temp) / 1000.0
+                zones[zone_type] = temp_c
+            except ValueError:
+                # Skip if raw temperature value is not a valid number
+                continue
 
-        # Skip this zone if either file could not be read
-        if zone_type is None or temp_raw is None:
-            continue
-
-        try:
-            # Sysfs reports temperature in millidegrees C ,  /1000 to get degrees C
-            temp_c = int(temp_raw) / 1000.0
-            zones[zone_type] = temp_c
-        except ValueError:
-            # Handle malformed temperature strings gracefully
-            continue
-
-    # If no thermal zones successfully parsed, report unknown state
+    # If no thermal zones could be parsed, return unknown dictionary
     if not zones:
-        return unknown(src, "no thermal zones found or readable under sysfs")
+        return unknown(base_rel, "No valid thermal zone entries found")
 
+    # Determine summary value (average temperature across all reported zones)
+    avg_temp = round(sum(zones.values()) / len(zones), 1)
+
+    # Return full thermal report dictionary with converted temperatures
     return {
-        "value": zones,
+        "value": avg_temp,
         "zones": zones,
-        "source": src,
+        "source": base_rel,
         "status": "ok",
     }
 
@@ -355,49 +392,53 @@ def probe_power_mode(root: Path = Path("/"), nvpmodel_output: str | None = None)
     same model are usually reporting different power modes, and without this
     field there is no way to find that out after the fact.
     """
-    src = "nvpmodel -q"
+    source_label = "nvpmodel -q"
 
-    # My Code:
-    # Step 1: Get nvpmodel status output (use injected string if testing, else execute binary)
+    # Step 1: Obtain nvpmodel command output
     if nvpmodel_output is not None:
-        raw = nvpmodel_output
+        raw_output = nvpmodel_output
+        source_label = "injected nvpmodel output"
     else:
-        # Run `nvpmodel -q` to query active power profile
-        raw = run(["nvpmodel", "-q"])
+        # Run 'nvpmodel -q' to query current active power mode profile
+        raw_output = run(["nvpmodel", "-q"])
 
-    # If command failed, missing from PATH or returned nothing
-    if not raw:
-        return unknown(src, "nvpmodel command failed, missing, or returned empty output")
+    # Check if command output is missing or empty
+    if not raw_output:
+        return unknown(source_label, "nvpmodel output unavailable or command failed")
 
-    # Step 2: Extract power mode ID and mode name from output
-    # Sample nvpmodel -q output:
-    # NVPMWARN: ...
-    # NVPOWERMODE: 15W
-    # or:
-    # NV Power Mode: MAXN
-    # 0
-    mode_id_match = re.search(r"NVPOWERMODE:\s*(\S+)", raw) or re.search(r"Power Mode:\s*(\S+)", raw)
-    id_num_match = re.search(r"^\s*(\d+)\s*$", raw, re.MULTILINE)
+    # Step 2: Parse mode name and mode ID from stdout text
+        # Parse numeric ID if present, "NVPM Power Mode ID: 0"
+    mode_name: str | None = None
+    mode_id: int | None = None
 
-    # If can't parse current power mode name/identifier
-    if not mode_id_match:
-        return unknown(src, f"unable to parse power mode from nvpmodel output: {raw!r}")
+    # Search for mode name line ("NVPMMode: MODE_15W" or "NV Power Mode: MODE_15W")
+    name_match = re.search(r"NV(?:PM)?(?:\s+Power)?\s*Mode:\s*([^\n\r]+)", raw_output, re.IGNORECASE)
+    if name_match:
+        mode_name = name_match.group(1).strip()
 
-    mode_name = mode_id_match.group(1).strip()
-    mode_id = int(id_num_match.group(1)) if id_num_match else None
+    # Search for mode ID integer line ("NVPM Power Mode ID: 0" or "MODE_ID: 0")
+    id_match = re.search(r"(?:MODE_ID|Power\s+Mode\s+ID):\s*(\d+)", raw_output, re.IGNORECASE)
+    if id_match:
+        mode_id = int(id_match.group(1))
 
-    # Step 3: Construct diagnostic report dictionary
+    # If parsing failed to isolate power mode name, return unknown
+    if not mode_name:
+        return unknown(source_label, "Unable to parse active power mode from nvpmodel output")
+
+    # Step 3: Return structured power mode dictionary
     return {
         "value": mode_name,
         "mode_id": mode_id,
-        "source": src,
+        "source": source_label,
         "status": "ok",
     }
 
+
 ## for debugging - uncomment the following lines for debugging.
-# if __name__ == "__main__":
-#     out = probe_power_mode()
-#     print(out)
+if __name__ == "__main__":
+     out = probe_power_mode()
+     print(out)
+
 
 # for generating system_report.json
 if __name__ == "__main__":
@@ -414,4 +455,3 @@ if __name__ == "__main__":
     path = "system_report.json"
     with open(path, "w", encoding="utf-8") as f:
         json.dump(report, f, indent=4)
-
