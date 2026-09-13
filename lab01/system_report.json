@@ -18,7 +18,7 @@
     "nvme_present": {
         "value": true,
         "model": "K-RICARD NVME 256GB",
-        "source": "/sys/block/nvme0n1/device/model",
+        "source": "/sys/block/nvme0n1",
         "status": "ok"
     },
     "pcie_link": {
@@ -40,37 +40,37 @@
         "interpretation": "link running at its full capability, Gen1 x1"
     },
     "thermal_zones": {
-        "value": 53.781,
+        "value": 53.625,
         "zones": [
             {
                 "zone": "thermal_zone0",
                 "type": "cpu-thermal",
-                "temp_c": 52.0
+                "temp_c": 52.093
             },
             {
                 "zone": "thermal_zone1",
                 "type": "gpu-thermal",
-                "temp_c": 52.156
+                "temp_c": 51.875
             },
             {
                 "zone": "thermal_zone5",
                 "type": "soc0-thermal",
-                "temp_c": 52.218
+                "temp_c": 52.156
             },
             {
                 "zone": "thermal_zone6",
                 "type": "soc1-thermal",
-                "temp_c": 53.781
+                "temp_c": 53.625
             },
             {
                 "zone": "thermal_zone7",
                 "type": "soc2-thermal",
-                "temp_c": 51.531
+                "temp_c": 51.468
             },
             {
                 "zone": "thermal_zone8",
                 "type": "tj-thermal",
-                "temp_c": 53.718
+                "temp_c": 53.625
             }
         ],
         "source": "/sys/class/thermal/thermal_zone*/temp",

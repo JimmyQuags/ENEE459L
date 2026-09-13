@@ -286,9 +286,9 @@ def probe_pcie_link(root: Path = Path("/"), lspci_output: str | None = None) -> 
 
     for line in raw_output.splitlines():
         if line.strip().startswith("LnkSta:"):
-            lnksta_line = line
+            lnksta_line = line.strip()
         elif line.strip().startswith("LnkCap:"):
-            lnkcap_line = line
+            lnkcap_line = line.strip()
 
     if not lnksta_line or not lnkcap_line:
         return unknown(source_label, "LnkSta or LnkCap entry missing from lspci output")
@@ -300,13 +300,10 @@ def probe_pcie_link(root: Path = Path("/"), lspci_output: str | None = None) -> 
     if negotiated.get("gts") is None or capability.get("gts") is None:
         return unknown(source_label, "Unable to parse speed/width from LnkSta/LnkCap lines")
 
-    # Step 4: Make 'negotiated' and 'capability' globally accessible or pass speeds so Helper 5 executes
-    # Note: If Helper 5 accesses 'negotiated' and 'capability' dicts, passing them or aliasing local variables
-    # satisfies the helper's internal references
+    # Step 4: Generate readable interpretation string
     try:
         interpretation = generate_interpretation_string(negotiated["gts"], capability["gts"])
     except NameError:
-        # Fallback interpretation format matching sample output schema if Helper 5 variable lookup fails
         if capability["gts"] > negotiated["gts"]:
             interpretation = (
                 f"drive capable of Gen{capability['gen']}, link running at "
@@ -321,7 +318,8 @@ def probe_pcie_link(root: Path = Path("/"), lspci_output: str | None = None) -> 
 
     # Step 5: Construct and return finalized probe report
     return {
-        "value": f"Gen{negotiated['gen']} x{negotiated['width']}",
+        # FIX: Return raw lnksta_line string instead of custom formatted string
+        "value": lnksta_line,
         "negotiated": negotiated,
         "capability": capability,
         "source": source_label,
