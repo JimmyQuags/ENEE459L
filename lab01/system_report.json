@@ -11,6 +11,7 @@
     },
     "root_source": {
         "value": "/dev/nvme0n1p1",
+        "kind": "nvme",
         "source": "/proc/mounts",
         "status": "ok"
     },
@@ -39,14 +40,14 @@
         "status": "ok"
     },
     "thermal_zones": {
-        "value": 52.9,
+        "value": 53.0,
         "zones": {
-            "cpu-thermal": 52.406,
-            "gpu-thermal": 52.531,
-            "soc0-thermal": 52.437,
-            "soc1-thermal": 54.125,
-            "soc2-thermal": 51.781,
-            "tj-thermal": 54.125
+            "cpu-thermal": 52.75,
+            "gpu-thermal": 52.437,
+            "soc0-thermal": 52.531,
+            "soc1-thermal": 54.25,
+            "soc2-thermal": 51.906,
+            "tj-thermal": 54.312
         },
         "source": "/sys/class/thermal",
         "status": "ok"

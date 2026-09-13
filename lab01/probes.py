@@ -322,9 +322,9 @@ def probe_pcie_link(root: Path = Path("/"), lspci_output: str | None = None) -> 
         "value": f"Gen{negotiated['gen']} x{negotiated['width']}",
         "negotiated": negotiated,
         "capability": capability,
-        "interpretation": interpretation,
         "source": source_label,
         "status": "ok",
+        "interpretation": interpretation,
     }
 
 
