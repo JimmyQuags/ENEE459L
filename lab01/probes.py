@@ -413,18 +413,27 @@ def probe_power_mode(root: Path = Path("/"), nvpmodel_output: str | None = None)
     if not raw_output:
         return unknown(source_label, "nvpmodel output unavailable or command failed")
 
+    # Filter out empty lines
+    lines = [line.strip() for line in raw_output.splitlines() if line.strip()]
     mode_name: str | None = None
     mode_id: int | None = None
 
-    # Search for mode name (handles "MODE_NAME=25W", "NVPMMode: MODE_15W", or "NV Power Mode: 15W")
-    name_match = re.search(r"(?:MODE_NAME=|NV(?:PM)?(?:\s+Power)?\s*Mode:\s*)([^\s\r\n]+)", raw_output, re.IGNORECASE)
-    if name_match:
-        mode_name = name_match.group(1).replace("MODE_", "").strip()
+    # Step 2: Parse multi-line output format ("NV Power Mode: 25W \n 1")
+    for i, line in enumerate(lines):
+        if "Power Mode" in line or "NVPM" in line:
+            parts = line.split(":")
+            if len(parts) > 1:
+                mode_name = parts[1].replace("MODE_", "").strip()
+            # Check if the subsequent line contains the integer ID
+            if i + 1 < len(lines) and lines[i + 1].isdigit():
+                mode_id = int(lines[i + 1])
 
-    # Search for mode ID (handles "MODE_ID=1", "Power Mode ID: 1", or "NVPM Power Mode ID: 0")
-    id_match = re.search(r"(?:MODE_ID=|Power\s+Mode\s+ID:\s*|MODE_ID:\s*)(\d+)", raw_output, re.IGNORECASE)
-    if id_match:
-        mode_id = int(id_match.group(1))
+    # Fallback: scan for any isolated integer line if sequential check missed it
+    if mode_id is None:
+        for line in lines:
+            if line.isdigit():
+                mode_id = int(line)
+                break
 
     if not mode_name:
         return unknown(source_label, "Unable to parse active power mode from nvpmodel output")

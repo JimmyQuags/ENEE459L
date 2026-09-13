@@ -40,27 +40,27 @@
         "interpretation": "link running at its full capability, Gen1 x1"
     },
     "thermal_zones": {
-        "value": 53.875,
+        "value": 53.656,
         "zones": [
             {
                 "zone": "thermal_zone0",
                 "type": "cpu-thermal",
-                "temp_c": 51.812
+                "temp_c": 52.062
             },
             {
                 "zone": "thermal_zone1",
                 "type": "gpu-thermal",
-                "temp_c": 52.0
+                "temp_c": 52.093
             },
             {
                 "zone": "thermal_zone5",
                 "type": "soc0-thermal",
-                "temp_c": 52.062
+                "temp_c": 52.156
             },
             {
                 "zone": "thermal_zone6",
                 "type": "soc1-thermal",
-                "temp_c": 53.875
+                "temp_c": 53.656
             },
             {
                 "zone": "thermal_zone7",
@@ -70,7 +70,7 @@
             {
                 "zone": "thermal_zone8",
                 "type": "tj-thermal",
-                "temp_c": 53.875
+                "temp_c": 53.656
             }
         ],
         "source": "/sys/class/thermal/thermal_zone*/temp",
