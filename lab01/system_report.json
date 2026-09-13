@@ -1,0 +1,60 @@
+{
+    "module_model": {
+        "value": "NVIDIA Jetson Orin Nano Engineering Reference Developer Kit Super",
+        "source": "/proc/device-tree/model",
+        "status": "ok"
+    },
+    "memory_total_kb": {
+        "value": 7789952,
+        "source": "/proc/meminfo",
+        "status": "ok"
+    },
+    "root_source": {
+        "value": "/dev/nvme0n1p1",
+        "source": "/proc/mounts",
+        "status": "ok"
+    },
+    "nvme_present": {
+        "value": true,
+        "model": "K-RICARD NVME 256GB",
+        "source": "/sys/block/nvme0n1/device/model",
+        "status": "ok"
+    },
+    "pcie_link": {
+        "value": "Gen1 x1",
+        "negotiated": {
+            "raw": "LnkSta:\tSpeed 2.5GT/s (ok), Width x1 (ok)",
+            "gts": 2.5,
+            "width": 1,
+            "gen": 1
+        },
+        "capability": {
+            "raw": "LnkCap:\tPort #0, Speed 2.5GT/s, Width x1, ASPM L0s L1, Exit Latency L0s unlimited, L1 <64us",
+            "gts": 2.5,
+            "width": 1,
+            "gen": 1
+        },
+        "interpretation": "link running at its full capability, Gen1 x1",
+        "source": "lspci -vv",
+        "status": "ok"
+    },
+    "thermal_zones": {
+        "value": 53.0,
+        "zones": {
+            "cpu-thermal": 52.406,
+            "gpu-thermal": 52.687,
+            "soc0-thermal": 52.625,
+            "soc1-thermal": 54.156,
+            "soc2-thermal": 51.843,
+            "tj-thermal": 54.156
+        },
+        "source": "/sys/class/thermal",
+        "status": "ok"
+    },
+    "power_mode": {
+        "value": "25W",
+        "mode_id": null,
+        "source": "nvpmodel -q",
+        "status": "ok"
+    }
+}
