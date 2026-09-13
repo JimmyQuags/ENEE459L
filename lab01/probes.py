@@ -209,8 +209,10 @@ def probe_root_source(root: Path = Path("/")) -> dict[str, Any]:
         if len(parts) >= 2 and parts[1] == "/":
             # Extract device identifier (1st column, "/dev/nvme0n1p1" or "/dev/mmcblk0p1")
             device = parts[0]
+            # add kind parameter
+            kind = "nvme" if "nvme" in device else ("sd" if "mmcblk" in device else "other")
             # Return successfully parsed root device dictionary
-            return {"value": device, "source": src, "status": "ok"}
+            return {"value": device, "kind": kind, "source": src, "status": "ok"}
 
     # Return unknown if no line matching mount point "/" was found
     return unknown(src, "no root mount entry found in mount table")

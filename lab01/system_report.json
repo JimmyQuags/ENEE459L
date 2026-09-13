@@ -39,14 +39,14 @@
         "status": "ok"
     },
     "thermal_zones": {
-        "value": 53.0,
+        "value": 52.9,
         "zones": {
             "cpu-thermal": 52.406,
-            "gpu-thermal": 52.687,
-            "soc0-thermal": 52.625,
-            "soc1-thermal": 54.156,
-            "soc2-thermal": 51.843,
-            "tj-thermal": 54.156
+            "gpu-thermal": 52.531,
+            "soc0-thermal": 52.437,
+            "soc1-thermal": 54.125,
+            "soc2-thermal": 51.781,
+            "tj-thermal": 54.125
         },
         "source": "/sys/class/thermal",
         "status": "ok"
