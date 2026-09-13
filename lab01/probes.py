@@ -336,46 +336,52 @@ def probe_thermal_zones(root: Path = Path("/")) -> dict[str, Any]:
     numbers.
     """
 
-    # Specify base path where Linux sysfs exposes thermal zone directories
     base_rel = "/sys/class/thermal"
-    # Resolve physical directory path using provided mock root
     thermal_dir = Path(root) / base_rel.lstrip("/")
 
-    # Check if thermal class directory exists on this system/mock root
     if not thermal_dir.exists() or not thermal_dir.is_dir():
         return unknown(base_rel, "/sys/class/thermal absent or unreadable")
 
     zones: dict[str, float] = {}
 
-    # Iterate over all thermal_zone* subdirectories found in sysfs
     for zone_path in sorted(thermal_dir.glob("thermal_zone*")):
-        # Define relative paths for reading type and temp attributes
         type_rel = f"{base_rel}/{zone_path.name}/type"
         temp_rel = f"{base_rel}/{zone_path.name}/temp"
 
-        # Read zone name/type ("CPU-therm", "GPU-therm", "soc-thermal")
-        zone_type = read_text(root, type_rel)
-        # Read raw temperature string in millidegrees Celsius ("43000")
-        raw_temp = read_text(root, temp_rel)
+        # Safe fallback reader function for sysfs files that break pathlib.read_text()
+        def _read_sysfs(rel_path: str) -> str | None:
+            # First try official helper function
+            try:
+                res = read_text(root, rel_path)
+                if res is not None:
+                    return res
+            except (TypeError, OSError):
+                pass
+            
+            # Fallback for sysfs pseudo-files if Helper 1 raises TypeError
+            full_path = Path(root) / rel_path.lstrip("/")
+            try:
+                with open(full_path, "rb") as f:
+                    return f.read().decode("utf-8", errors="replace").strip("\x00").strip()
+            except (OSError, UnicodeDecodeError):
+                return None
 
-        # Skip entries that cannot be read properly
+        zone_type = _read_sysfs(type_rel)
+        raw_temp = _read_sysfs(temp_rel)
+
         if zone_type and raw_temp:
             try:
                 # Convert raw millidegrees string to float and divide by 1000 for C
                 temp_c = float(raw_temp) / 1000.0
                 zones[zone_type] = temp_c
             except ValueError:
-                # Skip if raw temperature value is not a valid number
                 continue
 
-    # If no thermal zones could be parsed, return unknown dictionary
     if not zones:
         return unknown(base_rel, "No valid thermal zone entries found")
 
-    # Determine summary value (average temperature across all reported zones)
     avg_temp = round(sum(zones.values()) / len(zones), 1)
 
-    # Return full thermal report dictionary with converted temperatures
     return {
         "value": avg_temp,
         "zones": zones,
