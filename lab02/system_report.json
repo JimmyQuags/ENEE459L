@@ -1,9 +1,18 @@
 {
     "probe_torch": {
-        "value": null,
-        "source": "torch",
-        "status": "unknown",
-        "detail": "torch is not importable: No module named 'torch'"
+        "value": "2.14.0+cu126",
+        "source": "import torch",
+        "status": "ok",
+        "version": {
+            "raw": "2.14.0+cu126",
+            "public": "2.14.0",
+            "local": "cu126",
+            "nvidia_build": false
+        },
+        "cuda_available": true,
+        "cuda_version": "12.6",
+        "device_name": "Orin",
+        "diagnosis": "torch is installed and sees the GPU"
     },
     "probe_cuda": {
         "value": "12.6.11",

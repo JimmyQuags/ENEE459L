@@ -34,6 +34,7 @@ def _split_local_version(raw: str) -> dict[str, Any]:
 # The probes.
 # ---------------------------------------------------------------------------
 
+# Probe 1
 def probe_torch(env: Env) -> dict[str, Any]:
     src = "import torch"
     try:
@@ -84,7 +85,7 @@ def probe_torch(env: Env) -> dict[str, Any]:
         )
     return out
 
-
+# Probe 2
 def probe_cuda(env: Env) -> dict[str, Any]:
     src = "/usr/local/cuda/version.json"
     raw = read_text(env.root, src)
@@ -107,7 +108,7 @@ def probe_cuda(env: Env) -> dict[str, Any]:
         "line": major_minor(version),
     }
 
-
+# Probe 3
 def probe_opencv(env: Env) -> dict[str, Any]:
     src = "import cv2"
     try:
@@ -137,7 +138,7 @@ def probe_opencv(env: Env) -> dict[str, Any]:
         "detail": detail,
     }
 
-
+# Probe 4
 def probe_tensorrt(env: Env) -> dict[str, Any]:
     src = "import tensorrt"
     try:
@@ -162,7 +163,7 @@ def probe_tensorrt(env: Env) -> dict[str, Any]:
         "line": major_minor(str(raw)),
     }
 
-
+# Probe 5
 def probe_l4t(env: Env) -> dict[str, Any]:
     src = "/etc/nv_tegra_release"
     raw = read_text(env.root, src)
@@ -187,10 +188,10 @@ def probe_l4t(env: Env) -> dict[str, Any]:
     }
 
 ## for debugging - uncomment the following lines for debugging.
-if __name__ == "__main__":
-    env = Env.real()
-    out = probe_l4t(env)
-    print(out)
+#if __name__ == "__main__":
+    #env = Env.real()
+    #out = probe_l4t(env)
+    #print(out)
 
 # for generating system_report.json
 if __name__ == "__main__":
