@@ -35,9 +35,9 @@ def _split_local_version(raw: str) -> dict[str, Any]:
 # ---------------------------------------------------------------------------
 
 def probe_torch(env: Env) -> dict[str, Any]:
-    src = "torch"
+    src = "import torch"
     try:
-        torch = env.importer(src)
+        torch = env.importer("torch")
     except ModuleNotAvailable as e:
         return unknown(src, f"torch is not importable: {e}")
 
