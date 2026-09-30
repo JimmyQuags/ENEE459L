@@ -301,4 +301,5 @@ def to_flops(macs: dict[str, Any], convention: str = "mac_is_two_flops") -> dict
       convention=convention,
       flops_per_mac=factor,
       per_layer={name: count * factor for name, count in per_layer.items()},
+      note="a count of operations contains no unit of time",
     )

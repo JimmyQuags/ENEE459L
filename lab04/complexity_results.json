@@ -61,7 +61,8 @@
       "per_layer": {
         "conv1": 864000,
         "res_conv": 2136000
-      }
+      },
+      "note": "a count of operations contains no unit of time"
     },
     "mac_is_one_flop": {
       "value": 1500000,
@@ -72,7 +73,8 @@
       "per_layer": {
         "conv1": 432000,
         "res_conv": 1068000
-      }
+      },
+      "note": "a count of operations contains no unit of time"
     }
   }
 }
