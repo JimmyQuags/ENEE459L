@@ -285,23 +285,28 @@ def precision_row(model_name: str, config: Mapping[str, Any],
                   tensors: Sequence[Tensor],
                   calibration_values: Sequence[float],
                   all_values: Sequence[float]) -> dict[str, Any]:
+    
     label = str(config.get("label") or config.get("precision") or "")
     precision = str(config.get("precision", "fp32"))
+
     if precision not in PRECISIONS:
         raise TensorError(
             f"unknown precision {precision!r}; known: {list(PRECISIONS)}"
         )
+    
     granularity = str(config.get("granularity", "per_tensor"))
     symmetric = bool(config.get("symmetric", True))
     clip = str(config.get("clip", "minmax"))
     percentile = float(config.get("percentile", DEFAULT_PERCENTILE))
     calibration = str(config.get("calibration", "all"))
+
     if not label:
         raise TensorError("a configuration with no label cannot be plotted")
 
     if precision == "int8":
         after = []
         scale_count = 0
+        
         for t in tensors:
             q = quantize_tensor(t, DEFAULT_BITS, granularity, symmetric, clip,
                                 percentile)
@@ -330,6 +335,7 @@ def precision_row(model_name: str, config: Mapping[str, Any],
     weight_error = quantization_error(tensors, after)["relative"]
     activation_error = quantization_error([acts], [act_after])["relative"]
     stored = bytes_stored(tensors, precision, granularity)
+
     if parameters <= 0:
         raise TensorError("a model with no parameters has no bits per parameter")
     bits = round(stored * 8.0 / parameters, 4)
@@ -364,23 +370,16 @@ def pareto_front(points: Sequence[Mapping[str, Any]],
         for k, p in enumerate(pts):
             if p.get(name) is None:
                 raise TensorError(f"point {k} has no {name!r} to compare on")
-    objective_items = tuple(
-        (name, float(sense)) for name, sense in objectives.items()
-    )
-    values = [
-        tuple(float(p[name]) for name, _ in objective_items)
-        for p in pts
-    ]
     front: list[int] = []
-    for i, a in enumerate(values):
+    for i, a in enumerate(pts):
         beaten = False
-        for j, b in enumerate(values):
+        for j, b in enumerate(pts):
             if i == j:
                 continue
             better = False
             worse = False
-            for k, (_, sense) in enumerate(objective_items):
-                d = (b[k] - a[k]) * sense
+            for name, sense in objectives.items():
+                d = (float(b[name]) - float(a[name])) * float(sense)
                 if d > 0.0:
                     better = True
                 elif d < 0.0:
@@ -401,16 +400,14 @@ if __name__ == "__main__":
     model_name = model_spec["name"]
     total_params = total_parameters(model_tensors)
 
-    test_tensor = model_tensors[0]  # conv1: shape (20, 3, 3, 3)
+    test_tensor = model_tensors[0]  
 
     raw_samples = materialise_samples(layer="conv3", width=40, count=32, seed=model_spec["seed"] + 100)
     all_act_vals = tuple(v for s in raw_samples for v in s.data)
     calib_all = select_calibration(raw_samples, policy="all")
     calib_one_cls = select_calibration(raw_samples, policy="one_class")
 
-    # -----------------------------------------------------------------
     # 1. Test quantize_tensor
-    # -----------------------------------------------------------------
     print("\n[1/7] Testing quantize_tensor...")
     q_pt = quantize_tensor(test_tensor, bits=8, granularity="per_tensor", symmetric=True)
     q_pc = quantize_tensor(test_tensor, bits=8, granularity="per_channel", symmetric=True)
@@ -421,9 +418,7 @@ if __name__ == "__main__":
     print(f"  ✓ Per-tensor quantized:  {len(q_pt.codes)} codes, {q_pt.scale_count} scale")
     print(f"  ✓ Per-channel quantized: {len(q_pc.codes)} codes, {q_pc.scale_count} scales")
 
-    # -----------------------------------------------------------------
     # 2. Test dequantize
-    # -----------------------------------------------------------------
     print("\n[2/7] Testing dequantize...")
     deq_pt = dequantize(q_pt)
     deq_pc = dequantize(q_pc)
@@ -433,9 +428,7 @@ if __name__ == "__main__":
     assert deq_pc.shape == test_tensor.shape
     print(f"  ✓ Reconstructed tensor shape: {deq_pt.shape}, dtype: {deq_pt.dtype}")
 
-    # -----------------------------------------------------------------
     # 3. Test quantization_error
-    # -----------------------------------------------------------------
     print("\n[3/7] Testing quantization_error...")
     err_pt = quantization_error([test_tensor], [deq_pt])
     err_pc = quantization_error([test_tensor], [deq_pc])
@@ -444,9 +437,7 @@ if __name__ == "__main__":
     print(f"  ✓ Per-tensor relative error:  {err_pt['relative']:.6f} (max_abs: {err_pt['max_abs']:.6f})")
     print(f"  ✓ Per-channel relative error: {err_pc['relative']:.6f} (max_abs: {err_pc['max_abs']:.6f})")
 
-    # -----------------------------------------------------------------
     # 4. Test bytes_stored
-    # -----------------------------------------------------------------
     print("\n[4/7] Testing bytes_stored...")
     bytes_fp32 = bytes_stored(model_tensors, precision="fp32")
     bytes_fp16 = bytes_stored(model_tensors, precision="fp16")
@@ -454,15 +445,13 @@ if __name__ == "__main__":
     bytes_int8_pc = bytes_stored(model_tensors, precision="int8", granularity="per_channel")
 
     assert bytes_fp32 > bytes_fp16 > bytes_int8_pt
-    assert bytes_int8_pc >= bytes_int8_pt  # per-channel carries scale/zero per output channel
+    assert bytes_int8_pc >= bytes_int8_pt 
     print(f"  ✓ FP32 bytes:            {bytes_fp32} B")
     print(f"  ✓ FP16 bytes:            {bytes_fp16} B")
     print(f"  ✓ INT8 per-tensor bytes: {bytes_int8_pt} B")
     print(f"  ✓ INT8 per-channel bytes:{bytes_int8_pc} B")
 
-    # -----------------------------------------------------------------
     # 5. Test effective_bits
-    # -----------------------------------------------------------------
     print("\n[5/7] Testing effective_bits...")
     eff_fp32 = effective_bits(model_tensors, precision="fp32")
     eff_fp16 = effective_bits(model_tensors, precision="fp16")
@@ -471,15 +460,13 @@ if __name__ == "__main__":
 
     assert eff_fp32 == 32.0
     assert eff_fp16 == 16.0
-    assert eff_int8_pc > 8.0  # accounts for scales and zeros overhead
+    assert eff_int8_pc > 8.0
     print(f"  ✓ FP32 effective bits:            {eff_fp32:.4f}")
     print(f"  ✓ FP16 effective bits:            {eff_fp16:.4f}")
     print(f"  ✓ INT8 per-tensor effective bits: {eff_int8_pt:.4f}")
     print(f"  ✓ INT8 per-channel effective bits:{eff_int8_pc:.4f}")
 
-    # -----------------------------------------------------------------
     # 6. Test precision_row
-    # -----------------------------------------------------------------
     print("\n[6/7] Testing precision_row...")
     configs = [
         {"label": "FP32 Baseline", "precision": "fp32"},
@@ -523,11 +510,8 @@ if __name__ == "__main__":
         rows.append(row)
         print(f"  ✓ {row['label']:<32} | W_Err: {row['weight_error']:<8.6f} | Act_Err: {row['activation_error']:<8.6f} | Bits: {row['effective_bits']:<6.3f}")
 
-    # -----------------------------------------------------------------
     # 7. Test pareto_front & Save Output
-    # -----------------------------------------------------------------
     print("\n[7/7] Testing pareto_front...")
-    # Minimize effective_bits and minimize weight_error (sense = -1.0)
     objectives = {
         "effective_bits": -1.0,
         "weight_error": -1.0,
@@ -540,7 +524,8 @@ if __name__ == "__main__":
         p = rows[idx]
         print(f"    * Index {idx}: {p['label']} (Bits: {p['effective_bits']}, Weight Err: {p['weight_error']})")
 
-    # Output to JSON
+
+    # Output
     report_path = Path("quantization_test_results.json")
     results = {
         "model": model_name,
