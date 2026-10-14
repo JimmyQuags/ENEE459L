@@ -275,7 +275,7 @@ def effective_bits(tensors: Sequence[Tensor], precision: str = "fp32",
     
     n = total_parameters(tensors)
 
-    if total_parameters(tensors) <= 0:
+    if n <= 0:
         raise TensorError("a model with no parameters has no bits per parameter")
     
     return round(bytes_stored(tensors, precision, granularity) * 8.0 / n, 4)
