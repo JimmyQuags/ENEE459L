@@ -106,6 +106,9 @@ SHAPE_MARGIN = 0.50
 # argues with it. That is better than a threshold nobody can see.
 SCENE_MARGIN = 0.10
 
+# A structured frame below this mean intensity is underexposed.
+DARK_MEAN = 0.10
+
 # A frame is black when nothing in it is above this, on a 0-1 scale. Not zero.
 # Lecture 07 slide 41: a real scene in a dark room has a maximum well above
 # zero, and a sensor returning literal zeros everywhere is returning no signal

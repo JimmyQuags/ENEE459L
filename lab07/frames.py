@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import math
+from numbers import Integral, Real
 from typing import Any, Iterable, Sequence
 
-from schema import BLACK_MAX, FLAT_SPREAD
+from schema import BLACK_MAX, DARK_MEAN, FLAT_SPREAD
 
 import cv2
 import time
@@ -54,7 +56,9 @@ def _bytes_per_pixel(fmt: str) -> float:
         # exactly as much to move as the three that do.
         "bgrx": 4.0,
     }
-    key = str(fmt).lower()
+    if not isinstance(fmt, str):
+        raise FrameError(f"format must be a string, got {type(fmt).__name__}")
+    key = fmt.lower()
     if key not in table:
         raise FrameError(
             f"format {fmt!r} is not one of {', '.join(FORMATS)}. If you meant "
@@ -63,6 +67,17 @@ def _bytes_per_pixel(fmt: str) -> float:
         )
     return table[key]
 
+
+def _validate_dimensions(width: int, height: int) -> None:
+    if (isinstance(width, bool) or not isinstance(width, Integral) or width <= 0
+            or isinstance(height, bool) or not isinstance(height, Integral)
+            or height <= 0):
+        raise FrameError("width and height must be positive integers")
+
+
+def _validate_format_dimensions(width: int, height: int, fmt: str) -> None:
+    _validate_dimensions(width, height)
+    _bytes_per_pixel(fmt)
 
 
 # ---------------------------------------------------------------------------
@@ -114,37 +129,102 @@ def grab_frame(pipeline: str, warmup_frames: int = 15) -> np.ndarray:
 ############################
 
 def frame_bytes(width: int, height: int, fmt: str) -> int:
-    pass
+    _validate_format_dimensions(width, height, fmt)
+    return math.ceil(width * height * _bytes_per_pixel(fmt))
 
 
 def bytes_per_second(width: int, height: int, fmt: str, fps: float) -> float:
-    pass
+    if (isinstance(fps, bool) or not isinstance(fps, Real)
+            or not math.isfinite(fps) or fps <= 0):
+        raise FrameError("fps must be a finite, positive number")
+    return frame_bytes(width, height, fmt) * fps
 
 
 def frame_stats(pixels: Sequence[float] | Iterable[float]) -> dict[str, float]:
-    pass
+    values = np.asarray(list(pixels), dtype=np.float64)
+    if values.ndim != 1 or values.size == 0:
+        raise FrameError("pixels must be a non-empty, one-dimensional iterable")
+    if not np.all(np.isfinite(values)):
+        raise FrameError("pixels must contain only finite values")
+    if np.any((values < 0.0) | (values > 1.0)):
+        raise FrameError("pixels must be normalized to the range [0, 1]")
+    minimum = float(np.min(values))
+    maximum = float(np.max(values))
+    return {
+        "min": minimum,
+        "max": maximum,
+        "mean": float(np.mean(values)),
+        "spread": maximum - minimum,
+        "sd": float(np.std(values)),
+        "samples": float(values.size),
+    }
 
 
 def classify(stats: dict[str, float]) -> tuple[str, str]:
-    pass
+    required = ("max", "spread", "mean")
+    if any(key not in stats for key in required):
+        raise FrameError(f"stats must contain {', '.join(required)}")
+    values = {key: stats[key] for key in required}
+    if any(isinstance(value, bool) or not isinstance(value, Real)
+           or not math.isfinite(value) for value in values.values()):
+        raise FrameError("stats values must be finite numbers")
+    if not (0.0 <= values["max"] <= 1.0 and 0.0 <= values["mean"] <= 1.0):
+        raise FrameError("stats max and mean must be normalized to [0, 1]")
+    if values["spread"] < 0.0:
+        raise FrameError("stats spread cannot be negative")
+
+    mean = values["mean"]
+    spread = values["spread"]
+    if values["max"] <= BLACK_MAX:
+        return "black", f"max {values['max']:.4f} is at or below the black threshold."
+    if spread < FLAT_SPREAD:
+        return "flat", f"spread {spread:.4f} is below the structure threshold."
+    if mean < DARK_MEAN:
+        return (
+            "dark",
+            f"mean {mean:.4f} is below {DARK_MEAN:.4f}, "
+            "but the frame has structure.",
+        )
+    return "scene", f"mean {mean:.4f}, spread {spread:.4f}. Exposed and structured."
 
 
 def conversion_bytes(width: int, height: int, src: str, dst: str) -> int:
-    pass
+    if not isinstance(src, str) or not isinstance(dst, str):
+        raise FrameError("source and destination formats must be strings")
+    if src.lower() == dst.lower():
+        return 0
+    return frame_bytes(width, height, src) + frame_bytes(width, height, dst)
 
 
 def resize_bytes(src_w: int, src_h: int, dst_w: int, dst_h: int,
                  fmt: str) -> int:
-    pass
+    _validate_format_dimensions(src_w, src_h, fmt)
+    _validate_format_dimensions(dst_w, dst_h, fmt)
+    return frame_bytes(src_w, src_h, fmt) + frame_bytes(dst_w, dst_h, fmt)
 
 
 def normalise_bytes(width: int, height: int, channels: int = 3,
                     out_bytes: int = 4) -> int:
-    pass
+    _validate_dimensions(width, height)
+    for name, value in (("channels", channels), ("out_bytes", out_bytes)):
+        if isinstance(value, bool) or not isinstance(value, Integral) or value <= 0:
+            raise FrameError(f"{name} must be a positive integer")
+    pixels = width * height * channels
+    return pixels + pixels * out_bytes
 
 
 def summarise_formats(width: int, height: int) -> list[dict[str, Any]]:
-    pass
+    rgb_bytes = frame_bytes(width, height, "rgb")
+    return [
+        {
+            "format": fmt,
+            "bytes_per_pixel": _bytes_per_pixel(fmt),
+            "bytes": frame_bytes(width, height, fmt),
+            "relative_to_rgb": frame_bytes(width, height, fmt) / rgb_bytes,
+            "note": FORMAT_NOTES[fmt],
+        }
+        for fmt in FORMATS
+    ]
 
 
 ###############################
