@@ -177,7 +177,7 @@ def canny_scipy(image_path, output_path="edges_scipy.png", low=20, high=60):
     edge_image.save(output_path)
     return edges
 
-#CHANGE THE NAME OF THE .jpg TO TEST FOR A DIFFERENT IMAGE.
+# CHANGE THE NAME OF THE .jpg TO TEST FOR A DIFFERENT IMAGE.
 if __name__ == "__main__":
     detect_faces("face.jpg")
     canny_scipy("face.jpg")
