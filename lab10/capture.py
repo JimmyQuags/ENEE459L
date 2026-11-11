@@ -443,7 +443,7 @@ def main() -> None:
     output_file = (
         Path(args.output)
         if args.output
-        else input_file.with_name(f"{input_file.stem}_report.json")
+        else input_file.with_name("JQ_voice_report.json")  # THIS IS THE NAME OF THE OUTPUT FILE
     )
 
     results = run_analysis(input_file)
