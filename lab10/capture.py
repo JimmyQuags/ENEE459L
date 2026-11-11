@@ -457,6 +457,7 @@ def main() -> None:
         f"Bits in use: {results['resolution']['bits_in_use']} of {results['wav_structure']['block_align'] * 8 // results['wav_structure']['block_align']} bits"
     )
 
+# TEST WITH "python capture.py test_voice.wav"
 
 if __name__ == "__main__":
     main()
