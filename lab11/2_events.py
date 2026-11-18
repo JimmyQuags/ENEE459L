@@ -641,11 +641,7 @@ def main() -> int:
         print(f"Error: {exc}", file=sys.stderr)
         return EXIT_MALFORMED
 
-    # Remove the four null stage keys before writing the JSON file
-    null_stage_keys = {"stream", "scores", "timing", "quiet"}
-    output_doc = {k: v for k, v in session_doc.items() if k not in null_stage_keys}
-
-    args.output.write_text(json.dumps(output_doc, indent=2) + "\n", encoding="utf-8")
+    args.output.write_text(json.dumps(session_doc, indent=2) + "\n", encoding="utf-8")
     print(f"Saved Stage E events session JSON to {args.output}")
     return EXIT_OK
 

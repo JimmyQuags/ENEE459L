@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0",
   "lab": "lab11",
-  "generated": "2026-11-18T18:21:43.104758+00:00",
+  "generated": "2026-11-18T18:36:38.046404+00:00",
   "device_id": "local-workstation",
   "audio": {
     "name": "test_voice.wav",

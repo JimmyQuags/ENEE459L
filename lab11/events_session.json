@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0",
   "lab": "lab11",
-  "generated": "2026-11-18T18:21:44.183079+00:00",
+  "generated": "2026-11-18T18:36:39.120052+00:00",
   "device_id": "local-workstation",
   "audio": {
     "name": "test_voice.wav",
@@ -42,6 +42,10 @@
       "decisions_per_hour": 36000.0
     }
   },
+  "stream": null,
+  "scores": null,
+  "timing": null,
+  "quiet": null,
   "events": {
     "collar_s": 0.5,
     "predicted_s": [
