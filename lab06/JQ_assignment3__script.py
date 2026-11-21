@@ -853,7 +853,7 @@ if __name__ == "__main__":
 
 
     # Output
-    report_path = script_dir / "quantization_test_results.json"
+    report_path = script_dir / "JQ_assignment3_results.json"
     results = {
         "model": model_name,
         "total_parameters": total_params,
